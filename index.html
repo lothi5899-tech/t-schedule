@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#6d5dfc">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="T-Schedule">
+<link rel="manifest" href="manifest.json">
+<title>T-Schedule</title>
+<style>
+:root{--bg:#f7f7fb;--card:#fff;--text:#151522;--muted:#747487;--line:#e9e9f0;--accent:#6d5dfc;--soft:#eeecff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif}
+button,input{font:inherit}button{border:0}.app{max-width:520px;margin:auto;min-height:100vh;padding:calc(18px + env(safe-area-inset-top)) 16px calc(92px + env(safe-area-inset-bottom))}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}h1{font-size:26px;margin:0}h2{font-size:20px;margin:18px 0 10px}.muted{color:var(--muted);font-size:13px}.add{width:44px;height:44px;border-radius:15px;background:var(--accent);color:white;font-size:25px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin:10px 0}.hero{background:linear-gradient(135deg,#6d5dfc,#8c7dff);color:white;border:0}.hero .muted{color:#eee}
+.statgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}.stat{background:#fff;border-radius:15px;padding:12px;text-align:center}.event{padding:12px;background:#fafafe;border-radius:14px;margin:8px 0;border-left:4px solid var(--accent)}.event b{display:block;margin-bottom:3px}.task{display:flex;align-items:center;gap:11px}.task input{width:20px;height:20px;accent-color:var(--accent)}.task .txt{flex:1}.done{text-decoration:line-through;color:#999}
+.tabs{position:fixed;z-index:10;bottom:0;left:0;right:0;padding:8px max(8px,env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom));background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border-top:1px solid var(--line);display:flex;justify-content:center;gap:3px}.tabs button{flex:1;max-width:100px;background:transparent;color:var(--muted);padding:7px 2px;border-radius:13px;font-size:11px}.tabs button.active{background:var(--soft);color:var(--accent);font-weight:700}.icon{font-size:19px;display:block;margin-bottom:2px}
+.form{display:grid;gap:10px}.form label{font-size:13px;font-weight:650}.form input{width:100%;margin-top:5px;border:1px solid var(--line);border-radius:12px;padding:12px;background:white}.primary{background:var(--accent);color:white;padding:13px 16px;border-radius:13px;font-weight:700}.secondary{background:#eeeef5;padding:13px 16px;border-radius:13px;font-weight:700}.actions{display:flex;gap:8px}.delete{color:#e5484d;background:transparent}.week{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;overflow-x:auto}.day{min-width:64px;padding:9px 4px;text-align:center;background:white;border:1px solid var(--line);border-radius:13px}.day.active{background:var(--soft);color:var(--accent);font-weight:700}
+.clock{text-align:center;font-size:64px;font-weight:800;letter-spacing:-2px;margin:18px 0}.center{text-align:center}
+.empty{text-align:center;color:#999;padding:22px}.smallbtn{padding:9px 11px;border-radius:10px;background:#f0f0f5}
+@media(prefers-color-scheme:dark){:root{--bg:#111116;--card:#1b1b22;--text:#f5f5fa;--muted:#aaaab7;--line:#30303a;--soft:#282442}.tabs{background:rgba(27,27,34,.94)}.form input{background:#1b1b22;color:white}.event{background:#202028}.stat{background:#1b1b22}}
+</style>
+</head>
+<body>
+<div class="app">
+<header><div><h1>📚 T-Schedule</h1><div class="muted">Lịch học thông minh của bạn</div></div><button class="add" onclick="openAdd()">＋</button></header>
+<main id="main"></main>
+<nav class="tabs">
+<button data-p="home" onclick="go('home')"><span class="icon">⌂</span>Trang chủ</button>
+<button data-p="schedule" onclick="go('schedule')"><span class="icon">▦</span>Lịch</button>
+<button data-p="tasks" onclick="go('tasks')"><span class="icon">✓</span>Việc</button>
+<button data-p="focus" onclick="go('focus')"><span class="icon">◷</span>Tập trung</button>
+<button data-p="profile" onclick="go('profile')"><span class="icon">○</span>Cá nhân</button>
+</nav>
+</div>
+<script>
+const KEY='tschedule_iphone_v2';
+let s=JSON.parse(localStorage.getItem(KEY)||'null')||{page:'home',events:[],tasks:[]};
+let timer=null,secs=1500;
+const save=()=>localStorage.setItem(KEY,JSON.stringify(s));
+const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function go(p){s.page=p;save();render()}
+function render(){
+ document.querySelectorAll('.tabs button').forEach(b=>b.classList.toggle('active',b.dataset.p===s.page));
+ let h='';
+ if(s.page==='home'){
+  const upcoming=s.events.slice(0,3), pending=s.tasks.filter(x=>!x.done).length;
+  h=`<div class="card hero"><div class="muted">CHÀO BẠN 👋</div><h2 style="margin:5px 0">Sẵn sàng học chưa?</h2><div>Bạn còn <b>${pending}</b> việc cần hoàn thành.</div></div>
+  <div class="statgrid"><div class="stat"><b>${s.events.length}</b><div class="muted">Lịch học</div></div><div class="stat"><b>${s.tasks.filter(x=>x.done).length}</b><div class="muted">Đã xong</div></div><div class="stat"><b>${s.tasks.length}</b><div class="muted">Công việc</div></div></div>
+  <h2>📅 Lịch sắp tới</h2>${upcoming.map(eventCard).join('')||'<div class="card empty">Chưa có lịch học.<br>Nhấn ＋ để thêm.</div>'}
+  <h2>✅ Việc cần làm</h2>${s.tasks.slice(0,4).map(taskCard).join('')||'<div class="card empty">Chưa có công việc.</div>'}`;
+ }else if(s.page==='schedule'){
+  h=`<h2>📅 Thời gian biểu</h2><div class="week">${['T2','T3','T4','T5','T6','T7','CN'].map((x,i)=>`<div class="day ${i===0?'active':''}"><b>${x}</b><div class="muted">${s.events.filter(e=>e.day===x).length} lịch</div></div>`).join('')}</div>`;
+  h+=s.events.length?s.events.map(eventCard).join(''):'<div class="card empty">Thời gian biểu đang trống.</div>';
+ }else if(s.page==='tasks'){
+  h=`<div style="display:flex;justify-content:space-between;align-items:center"><h2>✅ Công việc</h2><button class="smallbtn" onclick="addTask()">＋ Thêm</button></div>`;
+  h+=s.tasks.map(taskCard).join('')||'<div class="card empty">Chưa có công việc.</div>';
+ }else if(s.page==='focus'){
+  h=`<div class="card center"><div class="muted">POMODORO</div><div class="clock" id="clock">${fmt(secs)}</div><div class="muted">25 phút tập trung · 5 phút nghỉ</div><div class="actions" style="justify-content:center;margin-top:18px"><button class="primary" onclick="toggleTimer()" id="timerBtn">${timer?'⏸ Tạm dừng':'▶ Bắt đầu'}</button><button class="secondary" onclick="resetTimer()">↻</button></div></div>`;
+ }else{
+  h=`<div class="card center"><div style="font-size:52px">👤</div><h2 style="margin:5px">Thương</h2><div class="muted">T-Schedule</div></div>
+  <div class="card"><h3>📊 Tổng quan</h3><div class="statgrid"><div class="stat"><b>${s.events.length}</b><div class="muted">Lịch</div></div><div class="stat"><b>${s.tasks.filter(x=>x.done).length}</b><div class="muted">Hoàn thành</div></div><div class="stat"><b>${Math.round(s.tasks.filter(x=>x.done).length/(s.tasks.length||1)*100)}%</b><div class="muted">Tiến độ</div></div></div></div>
+  <div class="card"><b>💡 Mẹo</b><p class="muted">Thêm lịch học và deadline ngay khi nhận được để tránh quên việc.</p></div>`;
+ }
+ document.getElementById('main').innerHTML=h;
+}
+function eventCard(e){return `<div class="card event"><b>${esc(e.title)}</b><div class="muted">📅 ${esc(e.day)} · ⏰ ${esc(e.start)}–${esc(e.end)}</div>${e.place?`<div class="muted">📍 ${esc(e.place)}</div>`:''}<button class="delete" onclick="delEvent('${e.id}')">Xóa</button></div>`}
+function taskCard(t,i){return `<div class="card task"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${i})"><div class="txt ${t.done?'done':''}"><b>${esc(t.title)}</b><div class="muted">Deadline: ${esc(t.deadline)}</div></div><button class="delete" onclick="delTask(${i})">Xóa</button></div>`}
+function openAdd(){let c=prompt('Bạn muốn thêm gì?\n1 = Lịch học\n2 = Công việc','1');if(c==='1')addEvent();if(c==='2')addTask()}
+function addTask(){let title=prompt('Tên công việc:');if(!title?.trim())return;let deadline=prompt('Deadline:','Hôm nay')||'Chưa đặt';s.tasks.push({title:title.trim(),deadline,done:false});save();render()}
+function addEvent(){let title=prompt('Tên môn / công việc:');if(!title?.trim())return;let day=prompt('Ngày (T2/T3/T4/T5/T6/T7/CN):','T2')||'T2';let start=prompt('Giờ bắt đầu:','07:30')||'07:30';let end=prompt('Giờ kết thúc:','09:00')||'09:00';let place=prompt('Phòng:','')||'';s.events.push({id:Date.now(),title:title.trim(),day,start,end,place});save();render()}
+function toggleTask(i){s.tasks[i].done=!s.tasks[i].done;save();render()}
+function delTask(i){s.tasks.splice(i,1);save();render()}
+function delEvent(id){s.events=s.events.filter(e=>String(e.id)!==String(id));save();render()}
+function fmt(x){return String(Math.floor(x/60)).padStart(2,'0')+':'+String(x%60).padStart(2,'0')}
+function toggleTimer(){if(timer){clearInterval(timer);timer=null}else{timer=setInterval(()=>{secs--;if(secs<=0){clearInterval(timer);timer=null;alert('🎉 Hoàn thành 25 phút tập trung!');secs=1500}render()},1000)}render()}
+function resetTimer(){clearInterval(timer);timer=null;secs=1500;render()}
+render();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
